@@ -1,4 +1,4 @@
-# %% Exercise 2: Monte carlo simulation of wind power
+# %% Exercise 2: Monte carlo simulation failures
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as sps

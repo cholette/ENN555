@@ -1,2 +1,5 @@
 *__pycache__*
 tutorials/tutorial_1/data/
+tutorials/tutorial_2/data/
+data/
+*.sam
