@@ -14,12 +14,15 @@ cd = 0.01
 cr = 0 # start at zero and note that there are spikes. Increase to smooth charging. 
 
 # %% Demand model loading and sampling
-T = 1488 # This can go up to the end of the month (31*2*4=1488), if so, possibly remove final storage constraint. 
+T = 3*48 # This can go up to the end of the month (31*2*4=1488), if so, possibly remove final storage constraint. 
 df = pd.read_csv('../../data/par_demand_model.csv')
 times = pd.date_range(start='2025-10-01 00:00:00',
                       periods=T,
                       freq='0.5h',
                       )
+times_storage = list(times) # storage time is one longer
+times_storage += [times_storage[-1]+pd.Timedelta(Δt,'h')]
+
 
 dist0 = sps.norm(loc=40,scale=np.sqrt(25))
 def sample_par(N=1):
@@ -60,19 +63,17 @@ def create_model(demand):
     model = gp.Model()
     P_batt = model.addVars(range(T),vtype=gp.GRB.CONTINUOUS,
                            lb=-P_chg_max,ub=P_dis_max,name='P_batt')
-    S = model.addVars(range(T),vtype=gp.GRB.CONTINUOUS,lb=0,ub=s_max,name='S')
+    S = model.addVars(range(T+1),vtype=gp.GRB.CONTINUOUS,lb=0,ub=s_max,name='S')
     P_grid = model.addVars(range(T),vtype=gp.GRB.CONTINUOUS,lb=0,name='P_grid')
     z_deg = model.addVars(range(T),vtype=gp.GRB.CONTINUOUS,lb=0,name='z_deg')
     z_change = model.addVars(range(T),vtype=gp.GRB.CONTINUOUS,lb=0,name='z_change')
 
     # initial/final values
     model.addConstr(S[0]==s0)
-    # model.addConstr(S[T-1]>=s0)         # ADD AFTER DISCUSSION with students about "cheating" when storage discharges fully
-    model.addConstr(P_batt[0]==0)       # don't count profit/loss from the zeroth epoch
-    model.addConstr(z_deg[0]==0)
+    # model.addConstr(S[T]>=s0)         # ADD AFTER DISCUSSION with students about "cheating" when storage discharges fully
 
     # storage & demand constraints
-    model.addConstrs( (S[ii] == S[ii-1] - P_batt[ii]*Δt for ii in range(1,T)) )
+    model.addConstrs( (S[ii+1] == S[ii] - P_batt[ii]*Δt for ii in range(T)) )
     model.addConstrs( (demand[ii] == P_batt[ii] + P_grid[ii]) for ii in range(1,T))
 
     # Absolute value linearizations
@@ -92,7 +93,7 @@ model.optimize()
 
 p_batt = [P_batt[ii].X for ii in range(T)]
 p_grid = [P_grid[ii].X for ii in range(T)]
-soc = [S[ii].X/s_max*100 for ii in range(T)]
+soc = [S[ii].X/s_max*100 for ii in range(T+1)]
 
 
 # %% plot optimal battery charge/discharge, state of charge, and grid demand
@@ -103,7 +104,7 @@ ax2[0].set_ylabel('P_batt')
 ax2[1].plot(times,p_grid)
 ax2[1].set_ylabel('P_grid')
 
-ax2[2].plot(times,soc)
+ax2[2].plot(times_storage,soc)
 ax2[2].set_xticklabels(ax2[2].get_xticklabels(), rotation=30, ha='right')
 ax2[2].set_ylabel('SOC (%)')
 
@@ -115,21 +116,20 @@ ax2[3].set_ylabel('Price ($)')
 D2 = sample_par()[0]
 
 p_grid2 = np.zeros(T)
-soc2 = np.zeros(T)
+soc2 = np.zeros(T+1)
 soc2[0] = s0
-for ii in range(1,len(D2)):
+for ii in range(T):
     p_grid2[ii] = max([0,D2[ii] - p_batt[ii]]) # needed to ensure there is no feed-in
-    soc2[ii] = soc2[ii-1] - p_batt[ii]*Δt
+    soc2[ii+1] = soc2[ii] - p_batt[ii]*Δt
 
 soc2 = soc2/s_max*100
-    
 
 model2,P_batt2,P_grid2,S2,z_deg2 = create_model(D2)
 model2.optimize()
 
 p_batt2_opt = [P_batt2[ii].X for ii in range(T)]
 p_grid2_opt = [P_grid2[ii].X for ii in range(T)]
-soc2_opt = [S2[ii].X/s_max*100 for ii in range(T)]
+soc2_opt = [S2[ii].X/s_max*100 for ii in range(T+1)]
 
 
 # %% plot optimal battery charge/discharge, state of charge, and grid demand
@@ -140,7 +140,7 @@ ax2[0].set_ylabel('P_batt')
 ax2[1].plot(times,p_grid2,times,p_grid2_opt)
 ax2[1].set_ylabel('P_grid')
 
-ax2[2].plot(times,soc2,times,soc2_opt)
+ax2[2].plot(times_storage,soc2,times_storage,soc2_opt)
 ax2[2].set_xticklabels(ax2[2].get_xticklabels(), rotation=30, ha='right')
 ax2[2].set_ylabel('SOC (%)')
 ax2[2].axhline(y=100,ls='--',color='red')
