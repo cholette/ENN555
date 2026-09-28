@@ -4,3 +4,6 @@ tutorials/tutorial_2/data/
 data/
 private/
 *.sam
+*.egg-info/
+build/
+outputs/

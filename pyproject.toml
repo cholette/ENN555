@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "enn555"
+version = "0.1.0.dev0"
+description = "Teaching code for ENN555 Operation and Maintenance of Renewable Energy Systems (QUT)"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Michael Cholette", email = "michael.cholette@qut.edu.au" }]
+requires-python = ">=3.11"
+classifiers = ["Development Status :: 2 - Pre-Alpha", "Private :: Do Not Upload"]
+# Lower bounds taken from the previous requirements.txt; loosened to allow patch/minor updates.
+dependencies = [
+    "numpy>=2.3",
+    "pandas>=2.3",
+    "scipy>=1.16",
+    "matplotlib>=3.10",
+    "pvlib>=0.13",
+    "gurobipy>=12.0",   # pip wheel ships a size-limited licence; full academic licence needed for large models
+]
+
+[project.optional-dependencies]
+notebooks = ["jupyterlab", "ipykernel"]
+dev = ["ruff", "pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
