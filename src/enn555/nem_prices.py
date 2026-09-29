@@ -69,7 +69,7 @@ def _bounds(start, end) -> tuple[pd.Timestamp, pd.Timestamp]:
 
 def _trim(df: pd.DataFrame, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
     """Keep intervals wholly inside [start, end] (interval-ending index)."""
-    return df.loc[(df.index - INTERVAL >= start) & (df.index <= end)]
+    return df.loc[(df.index >= start) & (df.index <= end)]
 
 
 def _months(start: pd.Timestamp, end: pd.Timestamp) -> list[tuple[int, int]]:
